@@ -1,0 +1,20 @@
+Hello, this is file1.
+It contains multiple lines.
+
+public class FileHandler {
+
+    public String readFromFile(Path path) {
+
+        StringBuilder content = new StringBuilder();
+
+        try (BufferedReader reader= Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+            String line;
+            while ((line=reader.readLine())!= null){
+                content.append(line).append(System.lineSeparator());
+            }
+            return content.toString();
+        } catch (IOException e) {
+            return "Something wrong " + e.getMessage();
+        }
+    }
+}
