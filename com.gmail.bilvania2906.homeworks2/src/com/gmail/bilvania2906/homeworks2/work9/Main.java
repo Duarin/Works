@@ -1,56 +1,65 @@
 package com.gmail.bilvania2906.homeworks2.work9;
-
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Main {
 
     public static void main(String[] args) {
-        CountDownLatch startLatch = new CountDownLatch(5);
-        CountDownLatch finishLatch = new CountDownLatch(1);
-        AtomicInteger firstFinish = new AtomicInteger(-1);
+        AtomicInteger firstCar = new AtomicInteger(-1);
+        StringBuilder results = new StringBuilder();  // Зберігаємо результати фінішів
+
+        CyclicBarrier barrier = new CyclicBarrier(5, () -> {
+            // Дія виконується після того, як всі потоки завершили роботу
+            System.out.println(results.toString()); // Виводимо результати фінішів
+            System.out.println("First car "+firstCar);
+        });
+
         System.out.println("Ready... Set.... GO");
 
         for (int i = 0; i < 5; i++) {
-            new Thread(new Cars(startLatch, finishLatch,firstFinish, i)).start();
+            new Thread(new Cars(i, firstCar, barrier, results)).start();
+
+
         }
-        try {
-            startLatch.await();
-            finishLatch.countDown();
-            System.out.println("The first car to finishing the race was Car: " + firstFinish.get());
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        System.out.println("Race finished! All cars have crossed the finish line!");
+
 
     }
 
     public static class Cars extends Thread {
-        private final CountDownLatch startLatch;
-        private final CountDownLatch finishLatch;
-        private final AtomicInteger firstFinish;
         private final int carId;
+        private final AtomicInteger firstCar;
+        private final CyclicBarrier barrier;
+        private final StringBuilder results;
 
-
-        Cars(CountDownLatch startLatch, CountDownLatch finishLatch, AtomicInteger firstFinish, int carId) {
-            this.startLatch = startLatch;
-            this.finishLatch = finishLatch;
-            this.firstFinish = firstFinish;
+        Cars(int carId, AtomicInteger firstCar, CyclicBarrier barrier, StringBuilder results) {
             this.carId = carId;
+            this.firstCar = firstCar;
+            this.barrier = barrier;
+            this.results = results;
         }
-
 
         @Override
         public void run() {
-
             try {
                 System.out.println("Car number: " + carId + " started the race");
-                Thread.sleep((long) (Math.random() * 5000));
-                firstFinish.compareAndSet(-1, carId);
-                startLatch.countDown();
-                finishLatch.await();
-                System.out.println("Car number: " + carId + ", has finished the race!");
-            } catch (InterruptedException e) {
+                Thread.sleep((long) (Math.random() * 5000));  // Імітуємо різний час фінішу
+
+                // Логіка фінішу
+                if (firstCar.get() == -1) {
+                    firstCar.compareAndSet(-1, carId); // Записуємо перший автомобіль, який фінішував
+                }
+
+                // Додаємо результат у спільний StringBuilder
+                synchronized (results) {
+                    results.append("Car number: ").append(carId).append(", has finished the race!\n");
+
+                }
+
+
+                // Усі машини чекають на бар'єр, щоб одночасно вивести результати
+                barrier.await();
+
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
